@@ -1,0 +1,282 @@
+---
+title: "Binning"
+server: shiny
+format:
+  dashboard:
+    theme: cosmo
+    orientation: columns
+    nav-buttons:
+      - reddit
+      - icon: github
+      - icon: gitlab
+        href: https://gitlab.com/
+---
+  
+```{r setup}
+#| context: setup
+#| include: false
+library(bslib)
+library(bsicons)
+library(classInt)
+library(colorspace)
+library(cowplot)
+library(DT)
+library(dplyr)
+library(ggplot2)
+library(htmltools)
+library(magrittr)
+library(sf)
+library(scales)
+library(shiny)
+ihme <- readRDS("./data/ihme.rds")
+ihme_ts <- readRDS("./data/ts_ihme_by_race.rds")
+cb_us <- readRDS("./data/cb_us.rds")
+method_description <- readRDS("./data/method_description.rds")
+source("./R/functions.R")
+```
+
+# Inputs {.sidebar}
+
+```{r}
+h6("Inputs:")
+hr()
+selectInput(
+  inputId = "year", 
+  label = "Years", 
+  choices = ihme$year %>% unique() %>% sort() %>% rev(),
+  selected = max(ihme$year)
+)
+selectInput(
+  inputId = "gender", 
+  label = "Gender:", 
+  choices = ihme$sex_name %>% unique() %>% sort(),
+  selected = "Both"
+)
+selectInput(
+  inputId = "race",
+  label = "Race:",
+  choices = c("Total", "AIAN", "API", "Black", "Latino", "White"),
+  selected = "Total"
+)
+selectInput(
+  inputId = "bins",
+  label = "Bins:",
+  choices = c(4:9),
+  selected = 4
+)
+selectInput(
+  inputId = "method",
+  label = "Method:",
+  choices = c("bclust", "box", "dpih", "equal", "fisher", "fixed", "hclust", 
+"headtails", "jenks", "kmeans", "maximum", "pretty", "quantile", 
+"sd"),
+  selected = "fisher"
+)
+selectInput(
+  inputId = "type",
+  label = "Type:",
+  choices = c("diverging", "sequential"),
+  selected = "sequential"
+)
+selectInput(
+  inputId = "palette",
+  label = "Palette:",
+  choices = NULL,
+  selected = NULL
+)
+selectInput(
+  inputId = "reverse",
+  label = "Reverse:",
+  choices = c("False", "True"),
+  selected = "True"
+)
+selectInput(
+  inputId = "keep_ol",
+  label = "Keep Outliers:",
+  choices = c(FALSE, TRUE),
+  selected = TRUE
+)
+
+
+```
+
+```{r server}
+#| context: server
+
+observeEvent(input$type, {
+  freezeReactiveValue(input, "palette")
+  colors <- hcl_palettes(type = input$type) %>% row.names() %>% sort() %>% dput()
+  updateSelectInput(inputId = "palette", choices = colors)
+})
+ 
+label_title <- reactive({
+  ifelse(input$year == "2019", "Life Expectancy", "Change in Life \nExpectancy")
+})
+
+output$map <- renderPlot({
+  map_us_data(
+    input_year     = input$year,
+    input_sex      = input$gender,
+    input_race     = input$race,
+    input_bins     = input$bins,
+    input_method   = input$method,
+    input_type     = input$type,
+    input_palette  = input$palette,
+    input_reverse  = input$reverse,
+    input_keep_ol  = input$keep_ol,
+    input_title    = label_title(),
+    input_dataset  = ihme
+  )
+})
+
+output$table <- renderDT({
+  datatable(
+    map_us_data_tbl(
+    input_year    = input$year,
+    input_sex     = input$gender,
+    input_race    = input$race,
+    input_bins    = input$bins,
+    input_method  = input$method,
+    input_keep_ol = input$keep_ol,
+    input_dataset = ihme
+    ),
+  rownames = F,
+  options = list(list("val", "desc"), dom = "ft")
+  ) %>% 
+    formatRound("val", digits = 1)
+})
+
+output$histogram <- renderPlot({
+  histogram_life_exp(
+    input_year     = input$year,
+    input_race     = input$race,
+    input_sex      = input$gender,
+    input_bins     = input$bins,
+    input_method   = input$method,
+    input_type     = input$type,
+    input_palette  = input$palette,
+    input_reverse  = input$reverse,
+    input_keep_ol  = input$keep_ol,
+    input_dataset  = ihme,
+    input_title    = label_title()
+  )
+})
+
+output$overall_title <- renderText({
+  paste("Avg.", input$race,  label_title(), input$year)
+})
+
+output$overall <- renderText({
+  pull_avg_overall_life_exp(
+    input_race = input$race,
+    input_year = input$year,
+    input_keep_ol = input$keep_ol
+    )
+})
+
+output$ts <- renderPlot({
+ ts_avg_life_exp(
+   input_year = as.integer(input$year),
+   input_race = input$race,
+   input_keep_ol = input$keep_ol,
+   input_dataset = ihme_ts
+   )
+})
+
+output$n_counties <- renderText({
+  pull_number_of_counties(
+    input_race    = input$race,
+    input_year    = input$year,
+    input_sex     = input$gender,
+    input_keep_ol = input$keep_ol,
+    dataset       = ihme
+  )
+})
+
+output$method_desc <- renderTable({
+  show_method_description(
+    input_method = input$method,
+    input_dataset = method_description
+  )
+})
+
+```
+
+
+# Life Expectancy {orientation="rows"}
+
+## row {height=65%}
+
+### column {.tabset width=65%}
+
+::: {.card title="Map"}
+
+```{r}
+
+plotOutput("map")
+
+```
+
+:::
+
+::: {.card title="Table"}
+
+```{r}
+DTOutput("table")
+```
+
+:::
+
+### column {.tabset}
+
+::: {.card title="Histogram"}
+
+```{r}
+
+plotOutput("histogram")
+
+```
+
+:::
+
+::: {.card title="Method"}
+
+```{r}
+tableOutput("method_desc")
+```
+
+:::
+
+## row {height=35%}
+
+
+```{r}
+value_box(
+  id = "Card 1",
+  title = textOutput("overall_title"),
+  value = textOutput("overall"),
+  showcase = bs_icon("cake2"),
+  theme = "light",
+  p("Female | Male")
+)
+
+```
+
+
+```{r}
+plotOutput("ts")
+```
+
+```{r}
+value_box(
+  id = "Card 2",
+  title = "Number of Counties: ",
+  value = textOutput("n_counties"),
+  showcase = bs_icon("pin-map-fill"),
+  theme = "light",
+  p("out of 3,144 total counties.")
+)
+```
+
+
+

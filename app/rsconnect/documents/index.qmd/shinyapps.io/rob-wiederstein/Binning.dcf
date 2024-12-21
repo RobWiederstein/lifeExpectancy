@@ -1,0 +1,14 @@
+name: Binning
+title: Binning
+username: rob-wiederstein
+account: rob-wiederstein
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13623358
+bundleId: 9554413
+url: https://rob-wiederstein.shinyapps.io/Binning/
+version: 1
+quarto_version: 1.5.57
+quarto_engines: knitr
+asMultiple: FALSE
+asStatic: FALSE
