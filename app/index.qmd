@@ -6,10 +6,8 @@ format:
     theme: cosmo
     orientation: columns
     nav-buttons:
-      - reddit
       - icon: github
-      - icon: gitlab
-        href: https://gitlab.com/
+        href: https://github.com/RobWiederstein/lifeExpectancy/tree/master
 ---
   
 ```{r setup}
