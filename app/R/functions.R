@@ -258,6 +258,6 @@ histogram_life_exp <-function(input_year, input_race, input_sex,
 show_method_description <- function(input_method, input_dataset){
     input_dataset %>% 
     filter(name == input_method) %>% 
-    select(description)
+    select(Description)
 }
 
