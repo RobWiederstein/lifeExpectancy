@@ -137,14 +137,14 @@ ts_avg_life_exp <- function(input_race, input_year, input_palette,
   input_dataset %>%
   dplyr::filter(race_name == input_race) %>%
   ggplot() +
-  geom_rect(aes(xmin = (input_year -.75), xmax = (input_year + .75), ymin = -Inf, ymax = Inf),
-              fill = "gray50", col = "gray50", alpha = .01) +
+  # geom_rect(aes(xmin = (input_year -.75), xmax = (input_year + .75), ymin = -Inf, ymax = Inf),
+  #             fill = "gray50", col = "gray50", alpha = .01) +
   aes(year, avg, group = sex_name, color = sex_name) +
   geom_line(lwd = 1.2) +
   scale_color_discrete_qualitative(name = "Gender: ", palette = "dark2") +
   cowplot::theme_cowplot() +
   labs(title = paste0(input_race, " Life Expectancy"),
-       y = "Age in Years",
+       y = "Years",
        x = "")
 }
 
