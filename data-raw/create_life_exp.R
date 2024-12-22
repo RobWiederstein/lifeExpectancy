@@ -78,7 +78,7 @@ build_ts_life_expectancy_data()
 build_method_description <- function(){
  library(tibble)
  tribble(
- ~Name,        ~Description,
+ ~name,        ~Description,
  "bclust",     "The \"bclust\" style uses bclust to generate the breaks using bagged clustering; it may be anchored using set.seed.",
  "box",        "The \"box\" style generates 7 breaks (therefore 6 categories) based on a box-and-whisker plot. First and last categories include the data values considered as outliers, and the four remaining categories are defined by the percentiles 25, 50 and 75 of the data distribution.",
  "dpih",       "The \"dpih\" style uses the dpih() function from KernSmooth (Wand, 1995) implementing direct plug-in methodology to select the bin width of a histogram.",
