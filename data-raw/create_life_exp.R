@@ -1,6 +1,13 @@
 library(dplyr)
 library(magrittr)
 library(tibble)
+library(tidyr)
+is_iqr_outlier <- function(x) {
+  q <- quantile(x, c(0.25, 0.75), na.rm = T)
+  iqr <- diff(q)
+  (x <= q[1] - 1.5 * iqr) | (x >= q[2] + 1.5 * iqr)
+}
+
 build_life_expectancy_data <- function(){
   files <- list.files(pattern = "IHME",
                       full.names = T,
@@ -31,17 +38,18 @@ build_life_expectancy_data <- function(){
   # combine
   bind_rows(df_2019, df_2000_2019) %>% 
     group_by(year, sex_name, race_name) %>%
-    mutate(avg = mean(val, na.rm = T),
-           sd = sd(val, na.rm = T),
-           sd_3x = (3* sd),
-           lb = avg - sd_3x,
-           ub = avg + sd_3x,
-           ol = ifelse(val >= ub | val <= lb, TRUE, FALSE),
-           .drop = TRUE) %>%
+    # mutate(avg = mean(val, na.rm = T),
+    #        sd = sd(val, na.rm = T),
+    #        sd_3x = (3* sd),
+    #        lb = avg - sd_3x,
+    #        ub = avg + sd_3x,
+    #        ol = ifelse(val >= ub | val <= lb, TRUE, FALSE),
+    #        .drop = TRUE) %>%
+    mutate(ol = is_iqr_outlier(val)) %>%
     select(year:val, ol) %>%
     arrange(year, fips, sex_name, race_name) %>%
     ungroup() -> ihme
-  saveRDS(ihme, file = "./data/ihme.rds")
+  saveRDS(ihme, file = "./app/data/ihme.rds")
 }
 build_life_expectancy_data()
 build_boundary_data <- function(){
