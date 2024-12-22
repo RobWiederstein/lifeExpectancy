@@ -197,7 +197,6 @@ output$method_desc <- renderTable({
     input_dataset = method_description
   )
 })
-
 ```
 
 

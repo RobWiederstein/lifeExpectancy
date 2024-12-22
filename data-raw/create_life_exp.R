@@ -1,5 +1,6 @@
 library(dplyr)
 library(magrittr)
+library(tibble)
 build_life_expectancy_data <- function(){
   files <- list.files(pattern = "IHME",
                       full.names = T,
@@ -77,7 +78,7 @@ build_ts_life_expectancy_data()
 build_method_description <- function(){
  library(tibble)
  tribble(
- ~name,        ~description,
+ ~Name,        ~Description,
  "bclust",     "The \"bclust\" style uses bclust to generate the breaks using bagged clustering; it may be anchored using set.seed.",
  "box",        "The \"box\" style generates 7 breaks (therefore 6 categories) based on a box-and-whisker plot. First and last categories include the data values considered as outliers, and the four remaining categories are defined by the percentiles 25, 50 and 75 of the data distribution.",
  "dpih",       "The \"dpih\" style uses the dpih() function from KernSmooth (Wand, 1995) implementing direct plug-in methodology to select the bin width of a histogram.",
@@ -92,7 +93,6 @@ build_method_description <- function(){
  "pretty",     "The \"pretty\" style chooses a number of breaks not necessarily equal to n using pretty, but likely to be legible.",
  "quantile",   "The \"quantile\" style provides quantile breaks; arguments to quantile may be passed through ....",
  "sd",         'The "sd" style chooses breaks based on pretty of the centred and scaled variables, and may have a number of classes different from n.'
- 
  ) -> method_description
  
  saveRDS(method_description, file = "./app/data/method_description.rds")
