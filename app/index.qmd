@@ -53,7 +53,7 @@ selectInput(
 selectInput(
   inputId = "race",
   label = "Race:",
-  choices = c("Total", "AIAN", "API", "Black", "Latino", "White"),
+  choices = list("Total" = "Total", "American Indian / Alaskan Native" = "AIAN", "Asian Pacific Islander" = "API", "Black" = "Black", "Latino" = "Latino", "White" = "White"),
   selected = "Total"
 )
 selectInput(
