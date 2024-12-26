@@ -26,6 +26,7 @@ library(magrittr)
 library(sf)
 library(scales)
 library(shiny)
+library(waiter)
 ihme <- readRDS("./data/ihme.rds")
 ihme_ts <- readRDS("./data/ts_ihme_by_race.rds")
 cb_us <- readRDS("./data/cb_us.rds")
@@ -36,6 +37,8 @@ source("./R/functions.R")
 # Inputs {.sidebar}
 
 ```{r}
+useWaiter()
+waiterOnBusy(html = spin_2(), color = "#e5e5e5", fadeout = 500)
 h6("Inputs:")
 hr()
 selectInput(
