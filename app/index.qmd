@@ -46,7 +46,7 @@ selectInput(
   inputId = "year", 
   label = "Years", 
   choices = ihme$year %>% unique() %>% sort() %>% rev(),
-  selected = max(ihme$year)
+  selected = "2000-2019"
 )
 selectInput(
   inputId = "gender", 
@@ -64,7 +64,7 @@ selectInput(
   inputId = "bins",
   label = "Bins:",
   choices = c(4:9),
-  selected = 4
+  selected = 6
 )
 selectInput(
   inputId = "method",
@@ -72,13 +72,13 @@ selectInput(
   choices = c("bclust", "box", "dpih", "equal", "fisher", "fixed", "hclust", 
 "headtails", "jenks", "kmeans", "maximum", "pretty", "quantile", 
 "sd"),
-  selected = "fisher"
+  selected = "kmeans"
 )
 selectInput(
   inputId = "type",
   label = "Type:",
   choices = c("diverging", "sequential"),
-  selected = "sequential"
+  selected = "diverging"
 )
 selectInput(
   inputId = "palette",
@@ -105,12 +105,13 @@ selectInput(
     "U.S. States" = "states",
     "None" = "none"
     ),
-  selected = "none"
+  selected = "states"
 )
 selectInput(
     inputId = "border",
     label = "Border Color:",
-    choices = paste0("gray", seq(0, 100, by = 25))
+    choices = paste0("gray", seq(0, 100, by = 25)),
+    selected = "gray75"
   )
 downloadButton('downloadPlot', 'Download Plot')
 ```
