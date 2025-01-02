@@ -1,17 +1,10 @@
-map_us_data <- function(input_year, input_sex, input_race,
-                        input_bins, input_method, input_type,
-                        input_palette, input_reverse, input_keep_ol,
-                        input_dataset, input_title){
-  # import
-  #ihme <- readRDS("./data/ihme.rds")
-  cb_us <- readRDS("./data/cb_us.rds")
-  # filter
+filter_ihme <- function(input_year, input_sex, input_race, input_keep_ol,
+                        input_bins, input_method, input_dataset){
   input_dataset %>%
     filter(year == input_year) %>%
     filter(sex_name == input_sex) %>%
     filter(race_name == input_race) %>%
-    {if(input_keep_ol) . else filter(., ol == F)} %>%
-    # bin
+    {if(input_keep_ol) . else filter(., ol == F)} %>% 
     mutate(val_f = cut(
       val,
       breaks = classIntervals(
@@ -20,14 +13,21 @@ map_us_data <- function(input_year, input_sex, input_race,
         style = input_method,
         warnLargeN = F
       )[[2]],
-      include.lowest = T)) -> map_data
-  # join
-  left_join(cb_us, map_data, by = join_by(fips)) -> us_le
-  # main
+      include.lowest = T))
+  
+}
+
+map_us_data <- function(input_year, input_sex, input_race,
+                        input_type, input_palette, input_reverse,
+                        input_dataset, input_title, input_poly,
+                        input_overlay, input_border){
+  # join ----
+  left_join(input_poly, input_dataset, by = join_by(fips)) -> us_le
+  # main ----
   us_le %>%
-    rmapshaper::ms_simplify(keep = .05, method = "vis") %>%
+    rmapshaper::ms_simplify(keep = .1, method = "vis") %>%
     ggplot() +
-    geom_sf(mapping = aes(fill = val_f), stat = "sf", show.legend = F) +
+    geom_sf(mapping = aes(fill = val_f), stat = "sf", show.legend = T) +
     {if(input_type == "diverging")
       scale_fill_discrete_diverging(
         palette = input_palette,
@@ -38,10 +38,16 @@ map_us_data <- function(input_year, input_sex, input_race,
         palette = input_palette,
         rev = input_reverse,
         name = "Age in Years")} +
+    {if(!is.character(input_overlay))
+      geom_sf(data = input_overlay,
+              fill = scales::alpha('#c55252', 0), 
+              linewidth = .5,
+              col = input_border)} +
     coord_sf(crs = 5070,
              xlim = c(-2.35e6, 2.23e6),
              ylim = c(0, 3.17e6),
              expand = TRUE) +
+    #geom_sf(data = input_overlay) +
     labs(title = paste(input_year, input_sex, input_race, input_title)) +
     theme_void() +
     theme(text=element_text(size=20)) -> main
@@ -103,24 +109,8 @@ map_us_data <- function(input_year, input_sex, input_race,
 
 }
 
-map_us_data_tbl <- function(input_year, input_sex, input_race,
-                            input_bins, input_method, input_dataset,
-                            input_keep_ol){
+map_us_data_tbl <- function(input_bins, input_method, input_dataset){
   input_dataset %>%
-    filter(year == input_year) %>%
-    filter(sex_name == input_sex) %>%
-    filter(race_name == input_race) %>%
-    {if(input_keep_ol) . else filter(., ol == F)} %>%
-    # bin
-    mutate(val_f = cut(
-      val,
-      breaks = classIntervals(
-        val,
-        n = input_bins,
-        style = input_method,
-        warnLargeN = F
-      )[[2]],
-      include.lowest = T)) %>%
     select(!age_name) %>%
     mutate(year = as.integer(year)) %>%
     arrange(desc(val))
@@ -148,12 +138,20 @@ ts_avg_life_exp <- function(input_race, input_year, input_palette,
        x = "")
 }
 
-pull_avg_overall_life_exp <- function(input_race, input_year, input_keep_ol){
-  ihme <- readRDS("./data/ihme.rds")
-  ihme %>%
-    filter(year == max(input_year)) %>%
+pull_avg_overall_life_exp <- function(input_year, input_sex, input_race,
+                                      input_keep_ol, input_dataset){
+  library(magrittr)
+  library(dplyr)
+  # ihme <- readRDS("./app/data/ihme.rds")
+  # input_year <- 2019
+  # input_sex <- "Male"
+  # input_race <- "Total"
+  # input_keep_ol <- TRUE
+  # ihme %>%
+  input_dataset %>% 
+    filter(year == input_year) %>%
+    filter(sex_name == input_sex) %>%
     filter(race_name == input_race) %>%
-    filter(sex_name == c("Male", "Female")) %>%
     {if(input_keep_ol) . else filter(., ol == F)} %>%
     group_by(sex_name) %>%
     summarize(avg = mean(val, na.rm = T), .groups = "drop") %>%
@@ -180,24 +178,7 @@ histogram_life_exp <-function(input_year, input_race, input_sex,
                               input_dataset, input_bins, input_method,
                               input_type, input_palette, input_reverse,
                               input_keep_ol, input_title){
-  #input_year <- 2019
-  #input_race <- "Total"
-  #input_sex <- "Both"
-  #input_bins <- 4
-  #input_method <- "fisher"
-  #input_type <- "diverging"
-  #input_palette <- "Tropic"
-  #input_reverse <- TRUE
-  #input_keep_ol <- TRUE
-  #ihme <- readRDS("./data/ihme.rds")
-
-  input_dataset %>%
-    dplyr::filter(year == input_year) %>%
-    dplyr::filter(race_name == input_race) %>%
-    dplyr::filter(sex_name == input_sex) %>%
-    {if(input_keep_ol) . else filter(., ol == F)} -> a
-
- summary(a$val)
+  input_dataset -> a
   # bin
   breaks <- classInt::classIntervals(
       a$val,
@@ -255,6 +236,7 @@ histogram_life_exp <-function(input_year, input_race, input_sex,
                      ncol = 2, rel_widths =  c(5, 1),
                      align = 'h', axis = 'lr')
 }
+
 show_method_description <- function(input_method, input_dataset){
     input_dataset %>% 
     filter(name == input_method) %>% 

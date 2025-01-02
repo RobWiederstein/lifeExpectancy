@@ -1,13 +1,9 @@
-library(dplyr)
-library(magrittr)
-library(tibble)
-library(tidyr)
+library(dplyr, magrittr, tibble, tidyr)
 is_iqr_outlier <- function(x) {
   q <- quantile(x, c(0.25, 0.75), na.rm = T)
   iqr <- diff(q)
   (x <= q[1] - 1.5 * iqr) | (x >= q[2] + 1.5 * iqr)
 }
-
 build_life_expectancy_data <- function(){
   files <- list.files(pattern = "IHME",
                       full.names = T,
@@ -52,7 +48,7 @@ build_life_expectancy_data <- function(){
   saveRDS(ihme, file = "./app/data/ihme.rds")
 }
 build_life_expectancy_data()
-build_boundary_data <- function(){
+build_county_boundary <- function(){
   cb <- sf::st_read(dsn = "./data-raw/cb_2021_us_county_20m/",
                     layer = "cb_2021_us_county_20m"
   ) %>% 
@@ -60,11 +56,24 @@ build_boundary_data <- function(){
     filter(stusps %in% state.abb) %>% 
     tidyr::unite(fips, statefp:countyfp, sep = "") %>% 
     select(fips, state_name, geometry) %>% 
-    #rmapshaper::ms_simplify(keep = .05, method = "vis") %>% 
+    rmapshaper::ms_simplify(keep = .25, method = "vis") %>% 
     arrange(state_name)
-  saveRDS(cb, file = "./data/cb_us.rds")
+  saveRDS(cb, file = "./app/data/cb_us.rds")
 }
-build_boundary_data()
+build_county_boundary()
+build_state_boundary <- function(){
+  sf::st_read(dsn = "./data-raw/cb_2018_us_state_20m/",
+                    layer = "cb_2018_us_state_20m"
+  ) %>% 
+    rename_with(~tolower(.x)) %>% 
+    filter(stusps %in% state.abb) %>% 
+    filter(!grepl("AK|HI", stusps)) %>%
+    select(stusps) %>%
+    arrange(stusps) %>% 
+    rmapshaper::ms_simplify(keep = .05, method = "vis") -> sb
+  saveRDS(sb, file = "./app/data/sb_us.rds")
+}
+build_state_boundary()
 build_ts_life_expectancy_data <- function(){
   files <- list.files(pattern = "IHME",
                       full.names = T,

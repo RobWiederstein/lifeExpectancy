@@ -30,6 +30,7 @@ library(waiter)
 ihme <- readRDS("./data/ihme.rds")
 ihme_ts <- readRDS("./data/ts_ihme_by_race.rds")
 cb_us <- readRDS("./data/cb_us.rds")
+sb_us <- readRDS("./data/sb_us.rds")
 method_description <- readRDS("./data/method_description.rds")
 source("./R/functions.R")
 ```
@@ -97,8 +98,21 @@ selectInput(
   choices = c(FALSE, TRUE),
   selected = TRUE
 )
-
-
+selectInput(
+  inputId = "overlay", 
+  label = "Overlay:",
+  choices = list(
+    "U.S. States" = "states",
+    "None" = "none"
+    ),
+  selected = "none"
+)
+selectInput(
+    inputId = "border",
+    label = "Border Color:",
+    choices = paste0("gray", seq(0, 100, by = 25))
+  )
+downloadButton('downloadPlot', 'Download Plot')
 ```
 
 ```{r server}
@@ -106,7 +120,8 @@ selectInput(
 
 observeEvent(input$type, {
   freezeReactiveValue(input, "palette")
-  colors <- hcl_palettes(type = input$type) %>% row.names() %>% sort() %>% dput()
+  colors <- hcl_palettes(type = input$type) %>% 
+    row.names() %>% sort() %>% dput()
   updateSelectInput(inputId = "palette", choices = colors)
 })
  
@@ -114,32 +129,53 @@ label_title <- reactive({
   ifelse(input$year == "2019", "Life Expectancy", "Change in Life \nExpectancy")
 })
 
-output$map <- renderPlot({
-  map_us_data(
+ihme_filtered <- reactive({
+  filter_ihme(
+    input_year      = input$year, 
+    input_sex       = input$gender, 
+    input_race      = input$race, 
+    input_keep_ol   = input$keep_ol,
+    input_bins      = input$bins,
+    input_method    = input$method,
+    input_dataset   = ihme
+  )
+})
+terr_filtered <- reactive({
+  if(input$overlay == "states"){
+    sb_us
+    }else{
+      if(input$overlay == "none"){
+        "None"
+      }
+    }
+})
+
+us_map <- reactive({
+   map_us_data(
     input_year     = input$year,
     input_sex      = input$gender,
     input_race     = input$race,
-    input_bins     = input$bins,
-    input_method   = input$method,
     input_type     = input$type,
     input_palette  = input$palette,
     input_reverse  = input$reverse,
-    input_keep_ol  = input$keep_ol,
     input_title    = label_title(),
-    input_dataset  = ihme
+    input_dataset  = ihme_filtered(),
+    input_poly     = cb_us,
+    input_overlay  = terr_filtered(),
+    input_border   = input$border
   )
+})
+
+output$map <- renderPlot({
+ us_map()
 })
 
 output$table <- renderDT({
   datatable(
     map_us_data_tbl(
-    input_year    = input$year,
-    input_sex     = input$gender,
-    input_race    = input$race,
     input_bins    = input$bins,
     input_method  = input$method,
-    input_keep_ol = input$keep_ol,
-    input_dataset = ihme
+    input_dataset = ihme_filtered()
     ),
   rownames = F,
   options = list(list("val", "desc"), dom = "ft")
@@ -157,8 +193,7 @@ output$histogram <- renderPlot({
     input_type     = input$type,
     input_palette  = input$palette,
     input_reverse  = input$reverse,
-    input_keep_ol  = input$keep_ol,
-    input_dataset  = ihme,
+    input_dataset  = ihme_filtered(),
     input_title    = label_title()
   )
 })
@@ -167,11 +202,17 @@ output$overall_title <- renderText({
   paste("Avg.", input$race,  label_title(), input$year)
 })
 
+output$overall_gender <- renderText({
+  paste("Gender: ", input$gender)
+})
+
 output$overall <- renderText({
   pull_avg_overall_life_exp(
-    input_race = input$race,
     input_year = input$year,
-    input_keep_ol = input$keep_ol
+    input_sex  = input$gender,
+    input_race = input$race,
+    input_keep_ol = input$keep_ol,
+    input_dataset = ihme
     )
 })
 
@@ -200,6 +241,14 @@ output$method_desc <- renderTable({
     input_dataset = method_description
   )
 })
+
+output$downloadPlot <- downloadHandler(
+    filename <- "us_map.png",
+    content = function(file, width = 8, height = 6) {
+        ggsave(us_map(), width = width, height = height, 
+               units = "in", filename = file)
+    }
+)
 ```
 
 
@@ -257,7 +306,7 @@ value_box(
   value = textOutput("overall"),
   showcase = bs_icon("cake2"),
   theme = "light",
-  p("Female | Male")
+  p(textOutput("overall_gender"))
 )
 
 ```
@@ -278,5 +327,35 @@ value_box(
 )
 ```
 
+<!--
+
+# Inputs
+
+```{r}
+tableOutput("proj_inputs")
+```
 
 
+```{r}
+#| context: server
+output$proj_inputs <- renderTable({
+  tibble::tribble(
+    ~'variable',                   ~"output",               ~"description",
+    "input$year",                input$year,                "calendar year as string",
+    "input$gender",              input$gender,              "gender",
+    "input$race",                input$race,                "race",
+    "input$bins",                input$bins,                "number of bins",
+    "input$method",              input$method,              "algorithm to bin life expectancy",
+    "input$type",                input$type,                "palette type",
+    "input$palette",             input$palette,             "palette colors",
+    "input$reverse",             input$reverse,             "reverse order of color palette",
+    "input$keep_ol",             input$keep_ol,             "map with or without outliers",
+    "input$overlay",             input$overlay,             "overlay areas",
+    "input$border",              input$border,              "gray scale for state borders"
+  )
+})
+
+```
+
+
+-->
